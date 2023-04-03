@@ -1,0 +1,7 @@
+*.pth
+*.pyc
+*.png
+*.gif
+*.tif
+*.pkl
+/.vscode
