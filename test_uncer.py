@@ -5,7 +5,7 @@ from ruamel.yaml import safe_load
 from torch.utils.data import DataLoader
 import models
 from dataset import vessel_dataset
-from tester import Tester
+from tester_uncer import Tester
 from utils import losses
 from utils.helpers import get_instance
 

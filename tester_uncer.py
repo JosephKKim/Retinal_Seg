@@ -49,11 +49,11 @@ class Tester(Trainer):
         with torch.no_grad():
             for i, (img, gt) in enumerate(tbar):
                 
-                save_path_vessel = save_path + 'vessel/'
+                save_path_vessel = os.path.join(save_path, 'vessel') 
                 if not os.path.exists(save_path_vessel):
                         os.makedirs(save_path_vessel)
 
-                save_path_mean = save_path + 'vessel_mean/'
+                save_path_mean = os.path.join(save_path, 'vessel_mean') 
                 if not os.path.exists(save_path_mean):
                     os.makedirs(save_path_mean)
                 # sample here to get uncertainty
@@ -66,8 +66,9 @@ class Tester(Trainer):
                 img = img.cuda(non_blocking=True)
                 original_img = img
                 gt = gt.cuda(non_blocking=True)
+                original_gt = gt
                 pre, latent_loss = self.model(img)
-                
+                original_pre = pre
                 loss = self.loss(pre, gt) + latent_loss 
                 self.total_loss.update(loss.mean().item())
                 self.batch_time.update(time.time() - tic)
@@ -92,14 +93,15 @@ class Tester(Trainer):
                 loss_op = 100000
                 aleatoric_op = 0
                 for k in range(50):
-                    res = self.model(original_img)
+                    res, _ = self.model(original_img)
                     pre_list.append(res.detach())
                     
                     # temperature scaling
                     res = res.sigmoid()
                     aleatoric_temp=-(res*torch.log(res+1e-8))
-                    check_loss=F.binary_cross_entropy_with_logits(aleatoric_temp,gt.sigmoid() , reduce='none')
-                    aleatoric_value=aleatoric_temp.sum(dim=1).mean()
+                    
+                    check_loss=F.binary_cross_entropy_with_logits(aleatoric_temp, original_gt.sigmoid() , reduce='none')
+                    # aleatoric_value=aleatoric_temp.sum(dim=1).mean()
                     if check_loss<loss_op:
                         loss_op = check_loss
                         aleatoric_op=aleatoric_temp
@@ -115,6 +117,8 @@ class Tester(Trainer):
                 aleatoric_map = F.upsample(aleatoric_map, size=[W, H], mode='bilinear', align_corners=False)
                 aleatoric_map = aleatoric_map.sigmoid().data.cpu().numpy().squeeze()
                 aleatoric_map= (aleatoric_map - aleatoric_map.min()) / (aleatoric_map.max() - aleatoric_map.min() + 1e-8)
+                
+                ##### PATH #####
                 save_path_var = os.path.join(save_path, 'var_maps_aleatoric')
                 if not os.path.exists(save_path_var):
                     os.makedirs(save_path_var)
@@ -128,12 +132,13 @@ class Tester(Trainer):
                 for iter in range(1, 50):
                     vessel_preds = torch.cat((vessel_preds, torch.sigmoid(pre_list[iter])), 1)
                 mean_map = torch.mean(vessel_preds, 1, keepdim=True)
-
                 save_map=mean_map
+                
+                ##### PATH #####
                 save_map = F.upsample(save_map, size=[W, H], mode='bilinear', align_corners=False)
                 save_map = save_map.sigmoid().data.cpu().numpy().squeeze()
                 save_map = 255 * (save_map - save_map.min()) / (save_map.max() - save_map.min() + 1e-8)
-                cv2.imwrite(save_path_mean + name[:-4] + '_' + str(0) + '.png', save_map)
+                cv2.imwrite(save_path_mean + 'mean_map' + '.png', save_map)
 
                 """total ucnertainty"""
                 total_uncertainty_temp=-(mean_map*torch.log(mean_map+ 1e-8))
@@ -142,7 +147,9 @@ class Tester(Trainer):
                 total_uncertainty = total_uncertainty.sigmoid().data.cpu().numpy().squeeze()
                 total_uncertainty = (total_uncertainty - total_uncertainty.min()) / (
                             total_uncertainty.max() - total_uncertainty.min() + 1e-8)
-                save_path_var = pre_root + 'var_maps_total/'
+                
+                ##### PATH #####
+                save_path_var = os.path.join(save_path, 'var_maps_total')
                 if not os.path.exists(save_path_var):
                     os.makedirs(save_path_var)
 
@@ -157,14 +164,15 @@ class Tester(Trainer):
                 temp[temp<0]=0
 
                 epistemic_uncertainty = temp
-                save_path_var = pre_root + 'var_maps_epistemic/'
+                ##### PATH #####
+                save_path_var = os.path.join(save_path, 'var_maps_epistemic')
                 if not os.path.exists(save_path_var):
                     os.makedirs(save_path_var)
 
                 fig = plt.figure()
                 heatmap = plt.imshow(epistemic_uncertainty, cmap='viridis')
                 fig.colorbar(heatmap)
-                fig.savefig(save_path_var + name)
+                fig.savefig(save_path_var + f"epistemic_uncertainty{i}.png")
                 plt.close()
                 
                 
