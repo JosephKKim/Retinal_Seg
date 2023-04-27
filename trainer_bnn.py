@@ -82,8 +82,11 @@ class Trainer:
             # print("train img shape: ", img.shape)
             gt = gt.cuda(non_blocking=True)
             self.optimizer.zero_grad()
+            pre, _ = self.model(img)
             
             
+            
+            pred_sigmoid = torch.sigmoid(pre).clone()
             """ Sampling """
             with torch.no_grad():
                 for kk in range(self.sampling_iter):
@@ -113,7 +116,7 @@ class Trainer:
             self.total_loss.update(loss.mean().item())
             self.batch_time.update(time.time() - tic)
             
-            pred_sigmoid = torch.sigmoid(pre).clone()
+            
             
             
             
