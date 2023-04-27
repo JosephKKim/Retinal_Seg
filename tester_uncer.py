@@ -92,7 +92,8 @@ class Tester(Trainer):
                 """MC-Sampling: 50 times"""
                 loss_op = 100000
                 aleatoric_op = 0
-                for k in range(50):
+                sample_iter = 50
+                for k in range(sample_iter):
                     res, _ = self.model(original_img)
                     pre_list.append(res.detach())
                     
@@ -108,13 +109,14 @@ class Tester(Trainer):
                         res_op=res
                 
                 
-                res_op = F.upsample(res_op, size=[W, H], mode='bilinear', align_corners=False)
+                res_op = F.upsample(res_op, size=[H, W], mode='bilinear', align_corners=False)
                 res_op = res_op.sigmoid().data.cpu().numpy().squeeze()
                 res_op = 255 * (res_op - res_op.min()) / (res_op.max() - res_op.min() + 1e-8)
-                cv2.imwrite(save_path_vessel + f"res_op{i}", res_op)
+                
+                cv2.imwrite(save_path_vessel + f"res_op{i}.png", res_op)
                 #aleatoric_op is the aleatoric uncertainty.
                 aleatoric_map=aleatoric_op
-                aleatoric_map = F.upsample(aleatoric_map, size=[W, H], mode='bilinear', align_corners=False)
+                aleatoric_map = F.upsample(aleatoric_map, size=[H, W], mode='bilinear', align_corners=False)
                 aleatoric_map = aleatoric_map.sigmoid().data.cpu().numpy().squeeze()
                 aleatoric_map= (aleatoric_map - aleatoric_map.min()) / (aleatoric_map.max() - aleatoric_map.min() + 1e-8)
                 
@@ -126,24 +128,37 @@ class Tester(Trainer):
                 fig = plt.figure()
                 heatmap = plt.imshow(aleatoric_map, cmap='viridis')
                 fig.colorbar(heatmap)
-                fig.savefig(save_path_var + f"aleatoric_map{i}.png")
+                fig.savefig(save_path_var + f"/aleatoric_map{i}.png")
                 plt.close()
                 vessel_preds = torch.sigmoid(pre_list[0]).clone()
-                for iter in range(1, 50):
+                for iter in range(1, sample_iter):
                     vessel_preds = torch.cat((vessel_preds, torch.sigmoid(pre_list[iter])), 1)
                 mean_map = torch.mean(vessel_preds, 1, keepdim=True)
                 save_map=mean_map
                 
                 ##### PATH #####
-                save_map = F.upsample(save_map, size=[W, H], mode='bilinear', align_corners=False)
+                # save_map = F.upsample(save_map, size=[H, W], mode='bilinear', align_corners=False)
+                save_map = TF.crop(save_map, 0, 0, H, W)
+                save_map_eval = torch.where(save_map > 0.5, 1, 0)
+                pre_sigmoid = pre.sigmoid()
+                cnt1 = (save_map > 0.5).sum().item()
+                cnt2 = (pre_sigmoid > 0.5).sum().item()
+                print("numbers: ", cnt1, cnt2)
+                
+                save_map_tensor = save_map
                 save_map = save_map.sigmoid().data.cpu().numpy().squeeze()
+                save_map_tensor = save_map_tensor.sigmoid()
+                
                 save_map = 255 * (save_map - save_map.min()) / (save_map.max() - save_map.min() + 1e-8)
-                cv2.imwrite(save_path_mean + 'mean_map' + '.png', save_map)
-
+                # save_map_tensor = 255 * (save_map_tensor - save_map_tensor.min()) / (save_map_tensor.max() - save_map_tensor.min() + 1e-8)
+                cv2.imwrite(save_path_mean + '/mean_map' + f'{i}.png', save_map)
+                save_map_eval = save_map_eval.data.cpu().numpy().squeeze()
+                save_map_eval = np.uint8(save_map_eval * 255)
+                cv2.imwrite(save_path_mean + f'/mean_map_b{i}.png', save_map_eval)
                 """total ucnertainty"""
                 total_uncertainty_temp=-(mean_map*torch.log(mean_map+ 1e-8))
                 total_uncertainty=total_uncertainty_temp
-                total_uncertainty = F.upsample(total_uncertainty, size=[W, H], mode='bilinear', align_corners=False)
+                total_uncertainty = F.upsample(total_uncertainty, size=[H, W], mode='bilinear', align_corners=False)
                 total_uncertainty = total_uncertainty.sigmoid().data.cpu().numpy().squeeze()
                 total_uncertainty = (total_uncertainty - total_uncertainty.min()) / (
                             total_uncertainty.max() - total_uncertainty.min() + 1e-8)
@@ -156,7 +171,7 @@ class Tester(Trainer):
                 fig = plt.figure()
                 heatmap = plt.imshow(total_uncertainty, cmap='viridis')
                 fig.colorbar(heatmap)
-                fig.savefig(save_path_var + f"total_uncertainty{i}.png")
+                fig.savefig(save_path_var + f"/total_uncertainty{i}.png")
                 plt.close()
                 """epistemic uncertainty"""
                 temp=total_uncertainty-aleatoric_map
@@ -172,7 +187,8 @@ class Tester(Trainer):
                 fig = plt.figure()
                 heatmap = plt.imshow(epistemic_uncertainty, cmap='viridis')
                 fig.colorbar(heatmap)
-                fig.savefig(save_path_var + f"epistemic_uncertainty{i}.png")
+                
+                fig.savefig(save_path_var + f"/epistemic_uncertainty{i}.png")
                 plt.close()
                 
                 
@@ -206,6 +222,11 @@ class Tester(Trainer):
                     if self.CFG.CCC:
                         self.CCC.update(count_connect_component(
                             pre, gt, threshold=self.CFG.threshold))
+                    # self._metrics_update(
+                    #     *get_metrics(save_map_tensor, gt, self.CFG.threshold, predict_b=save_map_eval).values())
+                    # if self.CFG.CCC:
+                    #     self.CCC.update(count_connect_component(
+                    #         save_map_tensor, gt, threshold=self.CFG.threshold))
                 tbar.set_description(
                     'TEST ({}) | Loss: {:.4f} | AUC {:.4f} F1 {:.4f} Acc {:.4f}  Sen {:.4f} Spe {:.4f} Pre {:.4f} IOU {:.4f} |B {:.2f} D {:.2f} |'.format(
                         i, self.total_loss.average, *self._metrics_ave().values(), self.batch_time.average, self.data_time.average))

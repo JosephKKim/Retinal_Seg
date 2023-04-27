@@ -24,9 +24,9 @@ def main(data_path, weight_path, CFG, show):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-dp", "--dataset_path", default="/home/lwt/data_pro/vessel/DRIVE", type=str,
+    parser.add_argument("-dp", "--dataset_path", default="dataset/DRIVE", type=str,
                         help="the path of dataset")
-    parser.add_argument("-wp", "--wetght_path", default="pretrained_weights/DRIVE/checkpoint-epoch40.pth", type=str,
+    parser.add_argument("-wp", "--wetght_path", default="/home/kkh/research/seg/FR-UNet/saved/FR_UNet_uncer/230423201002/DRIVE/latent8/checkpoint-best_val.pth", type=str,
                         help='the path of wetght.pt')
     parser.add_argument("--show", help="save predict image",
                         required=False, default=False, action="store_true")

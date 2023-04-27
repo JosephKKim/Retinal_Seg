@@ -78,6 +78,7 @@ def get_metrics_notLogit(predict, target, threshold=None, predict_b=None):
 
 def get_metrics(predict, target, threshold=None, predict_b=None):
     predict = torch.sigmoid(predict).cpu().detach().numpy().flatten()
+    
     if predict_b is not None:
         predict_b = predict_b.flatten()
         if torch.is_tensor(predict_b):

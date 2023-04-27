@@ -84,9 +84,6 @@ class Trainer:
             self.optimizer.zero_grad()
             
             
-            pre, _ = self.model(img)
-            pred_sigmoid = torch.sigmoid(pre).clone()
-            
             """ Sampling """
             with torch.no_grad():
                 for kk in range(self.sampling_iter):
@@ -98,17 +95,16 @@ class Trainer:
             mean_map = torch.mean(pred_sigmoid, 1, keepdim=True)
             
             
-
             if self.CFG.amp is True:
                 with torch.cuda.amp.autocast(enabled=True):
-                    _, latent_loss = self.model(img)
+                    pre, latent_loss = self.model(img)
                     loss = self.loss(mean_map, gt) + latent_loss
                     # print("latent loss: ",latent_loss)
                 self.scaler.scale(loss.mean()).backward()
                 self.scaler.step(self.optimizer)
                 self.scaler.update()
             else:
-                _, latent_loss = self.model(img)
+                pre, latent_loss = self.model(img)
                 loss = self.loss(mean_map, gt) + latent_loss
                 loss.mean().backward()
                 self.optimizer.step()
@@ -116,6 +112,14 @@ class Trainer:
             
             self.total_loss.update(loss.mean().item())
             self.batch_time.update(time.time() - tic)
+            
+            pred_sigmoid = torch.sigmoid(pre).clone()
+            
+            
+            
+            
+
+            
             
 
             """Train var approx net"""
@@ -163,7 +167,7 @@ class Trainer:
 
 
             self._metrics_update(
-                *get_metrics(mean_map, gt, threshold=self.CFG.threshold).values())
+                *get_metrics(pre, gt, threshold=self.CFG.threshold).values())
             tbar.set_description(
                 'TRAIN ({}) | Loss: {:.4f} | AUC {:.4f} F1 {:.4f} Acc {:.4f}  Sen {:.4f} Spe {:.4f} Pre {:.4f} IOU {:.4f} |B {:.2f} D {:.2f} |'.format(
                     epoch, self.total_loss.average, *self._metrics_ave().values(), self.batch_time.average,
@@ -192,14 +196,14 @@ class Trainer:
                 img = img.cuda(non_blocking=True)
                 # print(img.shape)
                 gt = gt.cuda(non_blocking=True)
-                
+                if self.CFG.amp is True:
+                    with torch.cuda.amp.autocast(enabled=True):
+                        predict, latent_loss = self.model(img)
+                        loss = self.loss(predict, gt) + latent_loss.mean()
+                else:
+                    predict, latent_loss = self.model(img)
+                    loss = self.loss(predict, gt) + latent_loss.mean()
                     
-                
-                
-                pre, _ = self.model(img)
-                pred_sigmoid = torch.sigmoid(pre).clone()
-                
-                
                 if dataset_name == "DRIVE":
                     H, W = 584, 565
                 elif dataset_name == "CHASEDB1":
@@ -210,35 +214,12 @@ class Trainer:
                 if not dataset_name == "CHUAC":
                     img = TF.crop(img, 0, 0, H, W)
                     gt = TF.crop(gt, 0, 0, H, W)
-                    pre = TF.crop(pre, 0, 0, H, W)
+                    predict = TF.crop(predict, 0, 0, H, W)
                 
                 print("the size of image for validation is ", H, W)
-                
-                
-                """ Sampling """
-                with torch.no_grad():
-                    for kk in range(self.sampling_iter):
-                        output , _ = self.model(img)
-                        pred_sigmoid = torch.cat((pred_sigmoid, torch.sigmoid(output)), 1)
-                
-                var_map = torch.var(pred_sigmoid, 1, keepdim=True)
-                var_map = (var_map - var_map.min()) / (var_map.max() - var_map.min() + 1e-8)
-                mean_map = torch.mean(pred_sigmoid, 1, keepdim=True)
-                
-                if self.CFG.amp is True:
-                    with torch.cuda.amp.autocast(enabled=True):
-                        _, latent_loss = self.model(img)
-                        loss = self.loss(mean_map, gt) + latent_loss.mean()
-                else:
-                    _, latent_loss = self.model(img)
-                    loss = self.loss(mean_map, gt) + latent_loss.mean()
-                
-                
-                
-                
                 self.total_loss.update(loss.item())
                 self._metrics_update(
-                    *get_metrics(mean_map, gt, threshold=self.CFG.threshold).values())
+                    *get_metrics(predict, gt, threshold=self.CFG.threshold).values())
                 tbar.set_description(
                     'EVAL ({})  | Loss: {:.4f} | AUC {:.4f} F1 {:.4f} Acc {:.4f} Sen {:.4f} Spe {:.4f} Pre {:.4f} IOU {:.4f} |'.format(
                         epoch, self.total_loss.average, *self._metrics_ave().values()))

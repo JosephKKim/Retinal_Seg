@@ -60,7 +60,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-dp', '--dataset_path', default="dataset/DRIVE", type=str,
                         help='the path of dataset')
-    parser.add_argument('-bs', '--batch_size', default=128,
+    parser.add_argument('-bs', '--batch_size', default=512,
                         help='batch_size for trianing and validation')
     parser.add_argument("--val", help="split training data for validation",
                         required=False, default=True, action="store_true")
