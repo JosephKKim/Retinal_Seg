@@ -33,7 +33,9 @@ class vessel_dataset(Dataset):
         gt_file = "gt" + img_file[3:]
         with open(file=os.path.join(self.data_path, gt_file), mode='rb') as file:
             gt = torch.from_numpy(pickle.load(file)).float()
-
+            
+            # tensor with shape [1, 48, 48]
+            
         if self.mode == "training" and not self.is_val:
             seed = torch.seed()
             torch.manual_seed(seed)

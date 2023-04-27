@@ -120,7 +120,7 @@ class FR_UNet_Cross(nn.Module):
         self.out_ave = out_ave
         filters = [64, 128, 256, 512, 1024]
         filters = [int(x / feature_scale) for x in filters] # [32, 64, 128, 256, 512]
-        # self.swin_cross_12_128 = HDRTransformer(img_size = 12, embed_dim=128)
+        self.swin_cross_12_128 = HDRTransformer(img_size = 12, embed_dim=128)
         self.swin_cross_24_64 = HDRTransformer(img_size = 24, embed_dim= 64)
         # 왜 Embed dim을 바꿔줬지?
         
@@ -205,8 +205,10 @@ class FR_UNet_Cross(nn.Module):
         
         # x2_1하고 x_down2_1하고를 swin_cross_block에 넣어주어야함
         # 12
-        x2_1 = self.swin_cross_24_64(x2_1, x1_1)
-    
+        # x2_1 = self.swin_cross_24_64(x2_1, x1_1)
+
+        # 21
+        x3_1 = self.swin_cross_12_128(x3_1, x2_2)
         
     
         

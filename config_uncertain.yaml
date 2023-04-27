@@ -1,0 +1,44 @@
+model:
+  type: FR_UNet_uncer
+  args:
+    {}
+
+var_model:
+  type: FCDiscriminator
+  args:
+    {}
+
+loss:
+  type: BCELoss
+  # type: BCELoss_soft
+  args:
+    {}
+
+optimizer:
+  type: Adam
+  args:
+    lr: 1e-4
+    weight_decay: 1e-5
+
+var_optimizer:
+  type: Adam
+  args:
+    lr: 1e-5
+    weight_decay: 0
+
+lr_scheduler:
+  type: CosineAnnealingLR
+  args:
+    T_max: 50
+
+epochs: 50
+save_dir: saved/
+val_per_epochs: 1
+save_period: 5
+tensorboard: true
+threshold: 0.5
+threshold_low: 0.3
+DTI: false
+amp: true
+tta: false
+CCC: false

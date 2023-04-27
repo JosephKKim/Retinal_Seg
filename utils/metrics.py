@@ -39,11 +39,49 @@ class AverageMeter(object):
     def average(self):
         return np.round(self.avg, 4)
 
+def get_metrics_notLogit(predict, target, threshold=None, predict_b=None):
+    predict = torch.sigmoid(predict).cpu().detach().numpy().flatten()
+    # if predict_b is not None:
+    #     predict_b = predict_b.flatten()
+    # else:
+    #     predict_b = np.where(predict >= threshold, 1, 0)
+    # print("predict shape: ", predict.shape)
+    predict_b = predict_b.flatten()
+    if torch.is_tensor(target):
+        target = target.cpu().detach().numpy().flatten()
+    else:
+        target = target.flatten()
+    print(target.shape, predict_b.shape)
+    print(predict_b)
+    tp = (predict_b * target).sum()
+    tn = ((1 - predict_b) * (1 - target)).sum()
+    fp = ((1 - target) * predict_b).sum()
+    fn = ((1 - predict_b) * target).sum()
+    auc = roc_auc_score(target, predict)
+    acc = (tp + tn) / (tp + fp + fn + tn)
+    pre = tp / (tp + fp)
+    sen = tp / (tp + fn)
+    spe = tn / (tn + fp)
+    iou = tp / (tp + fp + fn)
+    f1 = 2 * pre * sen / (pre + sen)
+    return {
+        "AUC": np.round(auc, 4),
+        "F1": np.round(f1, 4),
+        "Acc": np.round(acc, 4),
+        "Sen": np.round(sen, 4),
+        "Spe": np.round(spe, 4),
+        "pre": np.round(pre, 4),
+        "IOU": np.round(iou, 4),
+    }
+
+
 
 def get_metrics(predict, target, threshold=None, predict_b=None):
     predict = torch.sigmoid(predict).cpu().detach().numpy().flatten()
     if predict_b is not None:
         predict_b = predict_b.flatten()
+        if torch.is_tensor(predict_b):
+            predict_b = predict_b.cpu().detach().numpy().flatten()
     else:
         predict_b = np.where(predict >= threshold, 1, 0)
     if torch.is_tensor(target):

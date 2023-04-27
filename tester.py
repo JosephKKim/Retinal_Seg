@@ -43,6 +43,7 @@ class Tester(Trainer):
                 img = img.cuda(non_blocking=True)
                 gt = gt.cuda(non_blocking=True)
                 pre = self.model(img)
+                print("pre.shape: ", pre.shape)
                 loss = self.loss(pre, gt)
                 self.total_loss.update(loss.item())
                 self.batch_time.update(time.time() - tic)
@@ -63,6 +64,7 @@ class Tester(Trainer):
                 gt = gt[0,0,...]
                 pre = pre[0,0,...]
                 if self.show:
+                    
                     predict = torch.sigmoid(pre).cpu().detach().numpy()
                     predict_b = np.where(predict >= self.CFG.threshold, 1, 0)
                     cv2.imwrite(

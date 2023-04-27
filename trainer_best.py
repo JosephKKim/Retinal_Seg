@@ -104,6 +104,7 @@ class Trainer:
         self.lr_scheduler.step()
 
 # for validation
+# TODO change the size of input image
     def _valid_epoch(self, epoch):
         logger.info('\n###### EVALUATION ######')
         
@@ -123,6 +124,20 @@ class Trainer:
                 else:
                     predict = self.model(img)
                     loss = self.loss(predict, gt)
+                    
+                if self.dataset_path.endswith("DRIVE"):
+                    H, W = 584, 565
+                    # H, W = 592, 592
+                elif self.dataset_path.endswith("CHASEDB1"):
+                    H, W = 960, 999
+                elif self.dataset_path.endswith("DCA1"):
+                    H, W = 300, 300
+
+                if not self.dataset_path.endswith("CHUAC"):
+                    img = TF.crop(img, 0, 0, H, W)
+                    gt = TF.crop(gt, 0, 0, H, W)
+                    pre = TF.crop(pre, 0, 0, H, W)
+                
                 self.total_loss.update(loss.item())
                 self._metrics_update(
                     *get_metrics(predict, gt, threshold=self.CFG.threshold).values())

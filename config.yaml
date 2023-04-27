@@ -1,10 +1,11 @@
 model:
-  type: FR_UNet
+  type: FR_UNet_2class
   args:
     {}
 
 loss:
   type: BCELoss
+  # type: BCELoss_soft
   args:
     {}
 
