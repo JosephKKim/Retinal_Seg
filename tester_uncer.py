@@ -13,9 +13,17 @@ from loguru import logger
 from tqdm import tqdm
 from trainer import Trainer
 from utils.helpers import dir_exists, remove_files, double_threshold_iteration
-from utils.metrics import AverageMeter, get_metrics, get_metrics, count_connect_component
+from utils.metrics import AverageMeter, get_metrics, get_metrics_nosig, count_connect_component
 import ttach as tta
 
+def enable_dropout(model):
+    """ Function to enable the dropout layers during test-time """
+    for m in model.modules():
+        if m.__class__.__name__.startswith('Dropout'):
+            m.p = 0.1
+            m.train()
+           
+            
 
 class Tester(Trainer):
     def __init__(self, model, loss, CFG, checkpoint, test_loader, dataset_path, show=False):
@@ -93,11 +101,12 @@ class Tester(Trainer):
                 loss_op = 100000
                 aleatoric_op = 0
                 sample_iter = 50
+                enable_dropout(self.model)
                 for k in range(sample_iter):
                     res, _ = self.model(original_img)
                     pre_list.append(res.detach())
                     
-                    # temperature scaling
+                    # temperature scaling111
                     res = res.sigmoid()
                     aleatoric_temp=-(res*torch.log(res+1e-8))
                     
@@ -119,6 +128,9 @@ class Tester(Trainer):
                 aleatoric_map = F.upsample(aleatoric_map, size=[H, W], mode='bilinear', align_corners=False)
                 aleatoric_map = aleatoric_map.sigmoid().data.cpu().numpy().squeeze()
                 aleatoric_map= (aleatoric_map - aleatoric_map.min()) / (aleatoric_map.max() - aleatoric_map.min() + 1e-8)
+                
+                
+                
                 
                 ##### PATH #####
                 save_path_var = os.path.join(save_path, 'var_maps_aleatoric')
@@ -145,9 +157,10 @@ class Tester(Trainer):
                 cnt2 = (pre_sigmoid > 0.5).sum().item()
                 print("numbers: ", cnt1, cnt2)
                 
+                # 이미 sigmoid 적용됨...
                 save_map_tensor = save_map
                 save_map = save_map.sigmoid().data.cpu().numpy().squeeze()
-                save_map_tensor = save_map_tensor.sigmoid()
+                # save_map_tensor = save_map_tensor.sigmoid()
                 
                 save_map = 255 * (save_map - save_map.min()) / (save_map.max() - save_map.min() + 1e-8)
                 # save_map_tensor = 255 * (save_map_tensor - save_map_tensor.min()) / (save_map_tensor.max() - save_map_tensor.min() + 1e-8)
@@ -218,7 +231,7 @@ class Tester(Trainer):
                 # TODO: check the size of modified pre and gt 
                 else:
                     self._metrics_update(
-                        *get_metrics(pre, gt, self.CFG.threshold).values())
+                        *get_metrics_nosig(save_map_tensor, gt, 0.427).values())
                     if self.CFG.CCC:
                         self.CCC.update(count_connect_component(
                             pre, gt, threshold=self.CFG.threshold))

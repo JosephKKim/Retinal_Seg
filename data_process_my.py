@@ -125,7 +125,7 @@ def data_process(data_path, name, patch_size, stride, mode):
         save_patch(img_patch, save_path, "img_patch", name)
         save_patch(gt_patch, save_path, "gt_patch", name)
     elif mode == "test":
-        if name != "CHUAC":
+        if name != "CHUAC" and name != "STARE":
             img_list = get_square(img_list, name)
             gt_list = get_square(gt_list, name)
         save_each_image(img_list, save_path, "img", name)
@@ -140,6 +140,8 @@ def get_square(img_list, name):
         shape = 1008
     elif name == "DCA1":
         shape = 320
+    
+        
     _, h, w = img_list[0].shape
     pad = nn.ConstantPad2d((0, shape-w, 0, shape-h), 0)
     for i in range(len(img_list)):

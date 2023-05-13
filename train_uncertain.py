@@ -44,7 +44,6 @@ def main(CFG, data_path, batch_size, with_val=True, dataset_name=None, exp_id = 
     loss = get_instance(losses, 'loss', CFG)
     trainer = Trainer(
         model=model,
-        var_model = var_model, 
         loss=loss,
         CFG=CFG,
         train_loader=train_loader,

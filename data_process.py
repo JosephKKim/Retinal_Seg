@@ -134,6 +134,8 @@ def get_square(img_list, name):
         shape = 1008
     elif name == "DCA1":
         shape = 320
+    elif name == "STARE":
+        shape = 704
     _, h, w = img_list[0].shape
     pad = nn.ConstantPad2d((0, shape-w, 0, shape-h), 0)
     for i in range(len(img_list)):

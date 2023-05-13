@@ -166,6 +166,8 @@ class FR_UNet(nn.Module):
         x1_3, x_down1_3 = self.block1_3(x)
         x1_2, x_down1_2 = self.block1_2(x1_3)
         x2_2, x_up2_2, x_down2_2 = self.block2_2(x_down1_3)
+        print(x1_2.shape)
+        print(x_up2_2.shape)
         x1_1, x_down1_1 = self.block1_1(torch.cat([x1_2, x_up2_2], dim=1))
         x2_1, x_up2_1, x_down2_1 = self.block2_1(
             torch.cat([x_down1_2, x2_2], dim=1))

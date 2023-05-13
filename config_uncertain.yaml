@@ -31,7 +31,7 @@ lr_scheduler:
   args:
     T_max: 50
 
-epochs: 50
+epochs: 60
 save_dir: saved/
 val_per_epochs: 1
 save_period: 5

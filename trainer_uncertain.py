@@ -19,7 +19,7 @@ import torch.nn as nn
 
 
 class Trainer:
-    def __init__(self, model, var_model, CFG=None, loss=None, train_loader=None, val_loader=None, dataset_name = None, exp_id = None):
+    def __init__(self, model, CFG=None, loss=None, train_loader=None, val_loader=None, dataset_name = None, exp_id = None):
         # added var_model here
         
         self.CFG = CFG
@@ -27,7 +27,7 @@ class Trainer:
             self.scaler = torch.cuda.amp.GradScaler(enabled=True)
         self.loss = loss
         self.model = model
-        self.var_model = var_model
+        
         # self.model = nn.DataParallel(model.cuda())
         self.mse_loss = torch.nn.MSELoss(size_average=True, reduce=True)
         self.train_loader = train_loader
@@ -36,7 +36,7 @@ class Trainer:
             torch.optim, "optimizer", CFG, self.model.parameters())
         self.dataset_name = dataset_name
         # added var_model optimizer
-        self.var_model_optimizer = get_instance(torch.optim, "var_optimizer", CFG, self.var_model.parameters())
+        
         self.exp_id = exp_id
         self.lr_scheduler = get_instance(
             torch.optim.lr_scheduler, "lr_scheduler", CFG, self.optimizer)
@@ -109,6 +109,8 @@ class Trainer:
                     output , _ = self.model(img)
                     pred_sigmoid = torch.cat((pred_sigmoid, torch.sigmoid(output)), 1)
             
+            
+            
             var_map = torch.var(pred_sigmoid, 1, keepdim=True)
             var_map = (var_map - var_map.min()) / (var_map.max() - var_map.min() + 1e-8)
             mean_map = torch.mean(pred_sigmoid, 1, keepdim=True)
@@ -120,24 +122,7 @@ class Trainer:
 
             """Train var approx net"""
             
-            var_map_real=var_map.detach()
-            mean_map1=mean_map.detach()
-            
-            if self.CFG.amp is True:
-                with torch.cuda.amp.autocast(enabled=True):
-                    var_map_approx=self.var_model(img, mean_map1)
-                    var_map_approx=F.upsample(var_map_approx, size=(var_map_real.shape[2], var_map_real.shape[3]), mode='bilinear', align_corners=True)
-                    consist_loss = self.mse_loss(torch.sigmoid(var_map_approx), var_map_real)
-                self.scaler.scale(consist_loss.mean()).backward()
-                self.scaler.step(self.var_model_optimizer)
-                self.scaler.update()
-            else:
-                var_map_approx=self.var_model(img, mean_map1)
-                var_map_approx=F.upsample(var_map_approx, size=(var_map_real.shape[2], var_map_real.shape[3]), mode='bilinear', align_corners=True)
-                consist_loss = self.mse_loss(torch.sigmoid(var_map_approx), var_map_real)
-                consist_loss.mean().backward()
-                self.var_model_optimizer.step()
-                
+           
                 
                 
             # var_map_approx=self.var_model(img, mean_map1)
@@ -155,7 +140,7 @@ class Trainer:
                 # visualize_prediction_sample(torch.sigmoid(init_pred),folder_path)
                 visualize_prediction_var(torch.sigmoid(var_map), folder_path)
                 visualize_prediction_init(torch.sigmoid(mean_map), folder_path)
-                visualize_dis_out(torch.sigmoid(var_map_approx), folder_path)
+                # visualize_dis_out(torch.sigmoid(var_map_approx), folder_path)
                 visualize_gt(gt, folder_path)
                 visualize_original_img(img, folder_path)
                     
@@ -245,20 +230,10 @@ class Trainer:
                                 f'checkpoint-epoch{epoch}.pth')
         
         ## For predictive model
-        state_var = {
-            'arch': type(self.var_model).__name__,
-            'epoch': epoch,
-            'state_dict': self.var_model.state_dict(),
-            'optimizer': self.var_model_optimizer.state_dict(),
-            'config': self.CFG
-        }
-        filename_var = os.path.join(self.checkpoint_dir,
-                                f'checkpoint-epoch{epoch}_var.pth')
         
         
         logger.info(f'Saving a checkpoint: {filename} ...')
         torch.save(state, filename)
-        torch.save(state_var, filename_var)
         return filename
     
     def _save_best_checkpoint(self, epoch):
@@ -273,21 +248,10 @@ class Trainer:
                                 f'checkpoint-best_val.pth')
         
         ## For predictive model
-        state_var = {
-            'arch': type(self.var_model).__name__,
-            'epoch': epoch,
-            'state_dict': self.var_model.state_dict(),
-            'optimizer': self.var_model_optimizer.state_dict(),
-            'config': self.CFG
-        }
-        filename_var = os.path.join(self.checkpoint_dir,
-                                f'checkpoint-best_val_var_model_best.pth')
-        
-        
-        
+       
         logger.info(f'Saving a checkpoint: {filename} ...')
         torch.save(state, filename)
-        torch.save(state_var, filename_var)
+        
         return filename
 
     def _reset_metrics(self):

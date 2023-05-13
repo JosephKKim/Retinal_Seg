@@ -41,9 +41,10 @@ class Tester(Trainer):
             for i, (img, gt) in enumerate(tbar):
                 self.data_time.update(time.time() - tic)
                 img = img.cuda(non_blocking=True)
+                # img = TF.crop(img, 0, 0, 600, 700)
                 gt = gt.cuda(non_blocking=True)
                 pre = self.model(img)
-                print("pre.shape: ", pre.shape)
+                # print("pre.shape: ", pre.shape)
                 loss = self.loss(pre, gt)
                 self.total_loss.update(loss.item())
                 self.batch_time.update(time.time() - tic)
@@ -51,11 +52,12 @@ class Tester(Trainer):
                 if self.dataset_path.endswith("DRIVE"):
                     H, W = 584, 565
                     # H, W = 592, 592
-                elif self.dataset_path.endswith("CHASEDB1"):
+                elif self.dataset_path.endswith("CHASE"):
                     H, W = 960, 999
                 elif self.dataset_path.endswith("DCA1"):
                     H, W = 300, 300
-
+                elif self.dataset_path.endswith("STARE"):
+                    H, W = 704, 704
                 if not self.dataset_path.endswith("CHUAC"):
                     img = TF.crop(img, 0, 0, H, W)
                     gt = TF.crop(gt, 0, 0, H, W)

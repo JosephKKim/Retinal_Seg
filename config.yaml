@@ -1,5 +1,5 @@
 model:
-  type: FR_UNet_2class
+  type: FR_UNet
   args:
     {}
 

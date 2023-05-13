@@ -11,7 +11,7 @@ from loguru import logger
 from torch.utils import tensorboard
 from tqdm import tqdm
 from utils.helpers import dir_exists, get_instance, remove_files, double_threshold_iteration
-from utils.metrics import AverageMeter, get_metrics, get_metrics, count_connect_component
+from utils.metrics import AverageMeter, get_metrics, count_connect_component
 import ttach as tta
 
 
