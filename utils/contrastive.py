@@ -58,7 +58,7 @@ def compute_reco_loss(rep, label, uncer, strong_threshold=0.5, temp=0.5, num_que
         reco_loss = torch.tensor(0.0)
         seg_proto = torch.cat(seg_proto_list)
         valid_seg = len(seg_num_list)
-        seg_len = torch.arange(valid_seg)
+        # seg_len = torch.arange(valid_seg)
 
         for i in range(valid_seg):
             # sample hard queries
@@ -73,26 +73,35 @@ def compute_reco_loss(rep, label, uncer, strong_threshold=0.5, temp=0.5, num_que
             # apply negative key sampling (with no gradients)
             with torch.no_grad():
                 # generate index mask for the current query class; e.g. [0, 1, 2] -> [1, 2, 0] -> [2, 0, 1]
-                seg_mask = torch.cat(([seg_len[i:], seg_len[:i]]))
+                # seg_mask = torch.cat(([seg_len[i:], seg_len[:i]]))
 
                 # compute similarity for each negative segment prototype (semantic class relation graph)
                 # 이부분을 어떻게 해석해야하는지 in binary segmentation
-                # 
                 
-                proto_sim = torch.cosine_similarity(seg_proto[seg_mask[0]].unsqueeze(0), seg_proto[seg_mask[1:]], dim=1)
-                proto_prob = torch.softmax(proto_sim / temp, dim=0)
+                
+                # proto_sim = torch.cosine_similarity(seg_proto[seg_mask[0]].unsqueeze(0), seg_proto[seg_mask[1:]], dim=1)
+                # proto_prob = torch.softmax(proto_sim / temp, dim=0)
 
                 # sampling negative keys based on the generated distribution [num_queries x num_negatives]
-                negative_dist = torch.distributions.categorical.Categorical(probs=proto_prob)
-                samp_class = negative_dist.sample(sample_shape=[num_queries, num_negatives])
-                samp_num = torch.stack([(samp_class == c).sum(1) for c in range(len(proto_prob))], dim=1)
+                # negative_dist = torch.distributions.categorical.Categorical(probs=proto_prob)
+                # samp_class = negative_dist.sample(sample_shape=[num_queries, num_negatives])
+                # samp_num = torch.stack([(samp_class == c).sum(1) for c in range(len(proto_prob))], dim=1)
 
                 # sample negative indices from each negative class
-                negative_num_list = seg_num_list[i+1:] + seg_num_list[:i]
-                negative_index = negative_index_sampler(samp_num, negative_num_list)
-
+                # negative_num_list = seg_num_list[i+1:] + seg_num_list[:i]
+                # negative_index = negative_index_sampler(samp_num, negative_num_list)
+                
+                
+                ######################################
+                # since binary, we just have to sample index from the num_negative 
+                negative_num_list = seg_num_list[(i+1) % 2]
+                # list of index
+                negative_index = np.random.randint(low = 0, high = negative_num_list-1, size = num_negatives)
+                
                 # index negative keys (from other classes)
-                negative_feat_all = torch.cat(seg_feat_all_list[i+1:] + seg_feat_all_list[:i])
+                # negative_feat_all = torch.cat(seg_feat_all_list[i+1:] + seg_feat_all_list[:i])
+                negative_feat_all = seg_feat_all_list[(i+1) % 2]
+                
                 negative_feat = negative_feat_all[negative_index].reshape(num_queries, num_negatives, num_feat)
 
                 # combine positive and negative keys: keys = [positive key | negative keys] with 1 + num_negative dim
