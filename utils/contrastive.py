@@ -96,11 +96,12 @@ def compute_reco_loss(rep, label, uncer, strong_threshold=0.5, temp=0.5, num_que
                 # since binary, we just have to sample index from the num_negative 
                 negative_num_list = seg_num_list[(i+1) % 2]
                 # list of index
-                negative_index = np.random.randint(low = 0, high = negative_num_list-1, size = num_negatives)
+                negative_index = np.random.randint(low = 0, high = negative_num_list-1, size = (num_queries, num_negatives))
                 
                 # index negative keys (from other classes)
                 # negative_feat_all = torch.cat(seg_feat_all_list[i+1:] + seg_feat_all_list[:i])
                 negative_feat_all = seg_feat_all_list[(i+1) % 2]
+                
                 
                 negative_feat = negative_feat_all[negative_index].reshape(num_queries, num_negatives, num_feat)
 
