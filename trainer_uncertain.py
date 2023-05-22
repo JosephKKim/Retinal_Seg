@@ -187,10 +187,12 @@ class Trainer:
                     
                 if dataset_name == "DRIVE":
                     H, W = 584, 565
-                elif dataset_name == "CHASEDB1":
+                elif dataset_name == "CHASEDB1" or dataset_name == "CHASE":
                     H, W = 960, 999
                 elif dataset_name == "DCA1":
                     H, W = 300, 300
+                elif dataset_name == "STARE":
+                    H, W = 704, 704
 
                 if not dataset_name == "CHUAC":
                     img = TF.crop(img, 0, 0, H, W)

@@ -106,7 +106,7 @@ class Trainer:
             """ Sampling """
             loss_op = 100000
             aleatoric_op = 0    
-            sample_iter = 50
+            
             with torch.no_grad():
                 for kk in range(self.sampling_iter):
                     output, _, _  = self.model(img)
@@ -151,7 +151,6 @@ class Trainer:
             else:
                 # rep [B, 256, 48, 48]
                 pre, latent_loss, rep= self.model(img, gt)
-                
                 reco_loss = compute_reco_loss(rep, label, total_uncer, strong_threshold=0.5, temp = 0.5, num_queries=256, num_negatives=256)
                 loss = self.loss(pre, gt) + latent_loss + reco_loss
                 loss.mean().backward()
@@ -229,10 +228,12 @@ class Trainer:
                     
                 if dataset_name == "DRIVE":
                     H, W = 584, 565
-                elif dataset_name == "CHASEDB1":
+                elif dataset_name == "CHASEDB1" or dataset_name == "CHASE":
                     H, W = 960, 999
                 elif dataset_name == "DCA1":
                     H, W = 300, 300
+                elif dataset_name == "STARE":
+                    H, W = 704, 704
 
                 if not dataset_name == "CHUAC":
                     img = TF.crop(img, 0, 0, H, W)
